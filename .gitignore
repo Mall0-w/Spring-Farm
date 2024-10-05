@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+mysql_data
+.env
+src/main/resources/application-private.properties
