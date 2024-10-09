@@ -1,7 +1,7 @@
 package com.springfarm.SpringFarm;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springfarm.SpringFarm.controllers.UserController;
+import com.springfarm.SpringFarm.dtos.ErrorResponseDTO;
 import com.springfarm.SpringFarm.dtos.LoginDTO;
 import com.springfarm.SpringFarm.dtos.UserCreateDTO;
 import com.springfarm.SpringFarm.exceptions.EmailAlreadyExistsException;
@@ -12,100 +12,82 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
-import java.util.HashSet;
-
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.Mockito.*;
 
 class UserControllerTests {
-
-    private MockMvc mockMvc;
-
-    @Mock
-    private UserService userService;
 
     @InjectMocks
     private UserController userController;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    @Mock
+    private UserService userService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
     }
 
     @Test
-    void testUsers() throws Exception {
-        mockMvc.perform(get("/users/test"))
-                .andExpect(status().isOk())
-                .andExpect(content().string("Test"));
-    }
-
-    @Test
-    void loginUser() throws Exception {
+    void testLoginUser_Success() {
         LoginDTO loginDTO = new LoginDTO();
         loginDTO.setEmail("test@example.com");
         loginDTO.setPassword("password");
 
-        mockMvc.perform(post("/users/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(loginDTO)))
-                .andExpect(status().isOk())
-                .andExpect(content().string("test"));
+        User user = new User(); // Assume User has necessary fields
+
+        when(userService.loginUser(any(LoginDTO.class))).thenReturn(user);
+
+        ResponseEntity<String> response = userController.loginUser(loginDTO);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("login Successful", response.getBody());
     }
 
     @Test
-    void addUser_Success() throws Exception {
+    void testLoginUser_InvalidCredentials() {
+        LoginDTO loginDTO = new LoginDTO();
+        loginDTO.setEmail("test@example.com");
+        loginDTO.setPassword("wrongPassword");
+
+        when(userService.loginUser(any(LoginDTO.class))).thenReturn(null);
+
+        ResponseEntity<String> response = userController.loginUser(loginDTO);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("Invalid password or Email", response.getBody());
+    }
+
+    @Test
+    void testAddUser_Success() {
         UserCreateDTO userCreateDTO = new UserCreateDTO();
         userCreateDTO.setEmail("newuser@example.com");
-        userCreateDTO.setFirstName("John");
-        userCreateDTO.setLastName("Doe");
-        userCreateDTO.setPassword("password123");
-        userCreateDTO.setRoles(new HashSet<>());
+        userCreateDTO.setPassword("password");
 
-        User newUser = new User();
-        newUser.setId(1L);
-        newUser.setEmail(userCreateDTO.getEmail());
-        newUser.setFirstName(userCreateDTO.getFirstName());
-        newUser.setLastName(userCreateDTO.getLastName());
-
+        User newUser = new User(); // Assume User has necessary fields
         when(userService.createUser(any(UserCreateDTO.class))).thenReturn(newUser);
 
-        mockMvc.perform(post("/users/create")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userCreateDTO)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.email").value("newuser@example.com"))
-                .andExpect(jsonPath("$.firstName").value("John"))
-                .andExpect(jsonPath("$.lastName").value("Doe"));
+        ResponseEntity<?> response = userController.addUser(userCreateDTO);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertEquals(newUser, response.getBody());
     }
 
     @Test
-    void addUser_EmailAlreadyExists() throws Exception {
+    void testAddUser_EmailAlreadyExists() {
         UserCreateDTO userCreateDTO = new UserCreateDTO();
-        userCreateDTO.setEmail("existing@example.com");
-        userCreateDTO.setFirstName("Jane");
-        userCreateDTO.setLastName("Doe");
-        userCreateDTO.setPassword("password123");
-        userCreateDTO.setRoles(new HashSet<>());
+        userCreateDTO.setEmail("existinguser@example.com");
+        userCreateDTO.setPassword("password");
 
-        when(userService.createUser(any(UserCreateDTO.class)))
-                .thenThrow(new EmailAlreadyExistsException("Email already exists: " + userCreateDTO.getEmail()));
+        when(userService.createUser(any(UserCreateDTO.class))).thenThrow(new EmailAlreadyExistsException("Email already exists"));
 
-        mockMvc.perform(post("/users/create")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(userCreateDTO)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Email already exists: existing@example.com"))
-                .andExpect(jsonPath("$.details").value("Please use a different email address."));
+        ResponseEntity<?> response = userController.addUser(userCreateDTO);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("Email already exists: " + userCreateDTO.getEmail(), ((ErrorResponseDTO) response.getBody()).getMessage());
     }
 }

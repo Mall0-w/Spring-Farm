@@ -26,19 +26,24 @@ public class UserController {
 
     @GetMapping("/test")
     @PreAuthorize("permitAll()")
-    private ResponseEntity<String> testUsers(){
+    public ResponseEntity<String> testUsers(){
         return ResponseEntity.ok("Test");
     }
 
     @PostMapping("/login")
     @PreAuthorize("permitAll()")
-    private ResponseEntity<String> loginUser(@Valid @RequestBody LoginDTO login){
-        return ResponseEntity.ok("test");
+    public ResponseEntity<String> loginUser(@Valid @RequestBody LoginDTO login){
+        User u = userService.loginUser(login);
+        if(u == null){
+            return  new ResponseEntity<>("Invalid password or Email", HttpStatus.UNAUTHORIZED);
+        }
+
+        return ResponseEntity.ok("login Successful");
     }
 
     @PostMapping("/create")
     @PreAuthorize("permitAll()")
-    private ResponseEntity<?> addUser(@Valid @RequestBody UserCreateDTO user){
+    public ResponseEntity<?> addUser(@Valid @RequestBody UserCreateDTO user){
         try {
             User newUser = userService.createUser(user);
             return new ResponseEntity<>(newUser, HttpStatus.CREATED);

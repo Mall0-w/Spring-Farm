@@ -1,5 +1,6 @@
 package com.springfarm.SpringFarm.services;
 
+import com.springfarm.SpringFarm.dtos.LoginDTO;
 import com.springfarm.SpringFarm.dtos.UserCreateDTO;
 import com.springfarm.SpringFarm.exceptions.EmailAlreadyExistsException;
 import com.springfarm.SpringFarm.models.Roles;
@@ -11,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -24,6 +26,17 @@ public class UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    public User loginUser(LoginDTO login){
+        Optional<User> u = userRepository.findByEmail(login.getEmail());
+        if(u.isEmpty()) return null;
+        User user = u.get();
+        if (!passwordEncoder.matches(login.getPassword(), user.getPassHash())) {
+            return null;
+        }
+
+        return user;
+    }
 
     public User createUser(UserCreateDTO dto) {
         if(userRepository.existsByEmail(dto.getEmail()))
