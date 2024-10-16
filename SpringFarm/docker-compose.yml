@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0     # You can specify another version if needed
+    container_name: mysql_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME}           # The name of the initial database
+    ports:
+      - "3307:3306"    # Expose MySQL port
+    volumes:
+      - ./db_vol:/var/lib/mysql   # Persistent storage for the MySQL data

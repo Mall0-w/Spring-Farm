@@ -1,0 +1,5 @@
+
+/SpringFarm/db_data
+/SpringFarm/db_vol
+SpringFarm/.env
+SpringFarm/src/main/resources/application-private.properties
